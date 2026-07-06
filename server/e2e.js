@@ -1,6 +1,8 @@
 const QRCode = require('qrcode');
 const http = require('http');
 
+
+
 function post(buf, name) {
   return new Promise((resolve, reject) => {
     const b = '----B';
