@@ -25,7 +25,7 @@ interface ImageStats {
  * Estimate image brightness (0-255 scale)
  */
 async function estimateBrightness(buffer: Buffer): Promise<number> {
-  const { data, info } = await sharp(buffer)
+  const { data } = await sharp(buffer)
     .greyscale()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -41,7 +41,7 @@ async function estimateBrightness(buffer: Buffer): Promise<number> {
  * Estimate image contrast using standard deviation
  */
 async function estimateContrast(buffer: Buffer): Promise<number> {
-  const { data, info } = await sharp(buffer)
+  const { data } = await sharp(buffer)
     .greyscale()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -66,9 +66,13 @@ async function estimateContrast(buffer: Buffer): Promise<number> {
  */
 async function estimateSharpness(buffer: Buffer): Promise<number> {
   try {
-    const { data, info } = await sharp(buffer)
+    // Get image dimensions first, then resize to at most 400px wide before applying Laplacian
+    const metadata = await sharp(buffer).metadata();
+    const resizeWidth = Math.min(metadata.width || 800, 400);
+
+    const { data } = await sharp(buffer)
       .greyscale()
-      .resize(Math.min(info.width || 800, 400), null, { fit: 'inside' })
+      .resize(resizeWidth, null, { fit: 'inside' })
       .convolve({
         width: 3,
         height: 3,

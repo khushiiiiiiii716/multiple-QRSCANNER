@@ -1,136 +1,169 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Sparkles, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, CheckCircle2 } from 'lucide-react';
 import { EnhancementInfo } from '../types';
 
 interface EnhancementBadgeProps {
   enhancement: EnhancementInfo;
 }
 
+function Delta({ before, after }: { before: number; after: number }) {
+  const diff = after - before;
+  if (Math.abs(diff) < 3) return (
+    <span className="flex items-center gap-0.5 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+      <Minus className="w-3 h-3" /> ±0
+    </span>
+  );
+  const up = diff > 0;
+  return (
+    <span
+      className="flex items-center gap-0.5 text-xs font-mono font-semibold"
+      style={{ color: up ? '#22c55e' : '#ef4444' }}
+    >
+      {up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+      {up ? '+' : ''}{diff}
+    </span>
+  );
+}
+
+function StatRow({ label, before, after }: { label: string; before: number; after: number }) {
+  const pct = Math.min(100, Math.round((after / 255) * 100));
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+        <div className="flex items-center gap-3">
+          <span className="font-mono" style={{ color: 'var(--text-muted)' }}>{before}</span>
+          <span style={{ color: 'var(--text-muted)' }}>→</span>
+          <span className="font-mono font-bold" style={{ color: 'var(--text-primary)' }}>{after}</span>
+          <Delta before={before} after={after} />
+        </div>
+      </div>
+      {/* Mini bar */}
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--glass-bg)' }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+          className="h-full rounded-full"
+          style={{ background: 'linear-gradient(90deg, #3b82f6, #14b8a6)' }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export const EnhancementBadge: React.FC<EnhancementBadgeProps> = ({ enhancement }) => {
   const [expanded, setExpanded] = useState(false);
 
-  const getDelta = (before: number, after: number) => {
-    const diff = after - before;
-    if (Math.abs(diff) < 3) return { icon: Minus, color: 'text-gray-500', text: '±0' };
-    if (diff > 0) return { icon: TrendingUp, color: 'text-green-400', text: `+${diff}` };
-    return { icon: TrendingDown, color: 'text-red-400', text: `${diff}` };
-  };
-
-  const brightnessDelta = getDelta(enhancement.originalStats.brightness, enhancement.enhancedStats.brightness);
-  const contrastDelta = getDelta(enhancement.originalStats.contrast, enhancement.enhancedStats.contrast);
-  const sharpnessDelta = getDelta(enhancement.originalStats.sharpness, enhancement.enhancedStats.sharpness);
-
-  const hasEnhancements = enhancement.applied.length > 0 && 
+  const hasEnhancements = enhancement.applied.length > 0 &&
     !enhancement.applied[0].includes('No enhancement needed');
 
   if (!hasEnhancements) {
     return (
-      <div className="glass-card px-3 py-2 flex items-center gap-2">
-        <div className="w-6 h-6 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
-          <Sparkles className="w-3 h-3 text-green-400" />
-        </div>
-        <span className="text-xs text-gray-400">Image quality is already optimal</span>
+      <div
+        className="flex items-center gap-3 px-4 py-3 rounded-xl"
+        style={{
+          background: 'rgba(34,197,94,0.06)',
+          border: '1px solid rgba(34,197,94,0.2)',
+        }}
+      >
+        <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: '#22c55e' }} />
+        <span className="text-sm font-medium" style={{ color: '#22c55e' }}>
+          Image quality is optimal — no enhancement needed
+        </span>
       </div>
     );
   }
 
   return (
     <div className="glass-card overflow-hidden">
+      {/* Gradient top bar */}
+      <div className="h-0.5" style={{ background: 'linear-gradient(90deg, #8b5cf6, #3b82f6, #14b8a6)' }} />
+
       {/* Header */}
       <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full px-3 py-2 flex items-center justify-between hover:bg-white/5 transition-colors"
+        onClick={() => setExpanded(v => !v)}
+        className="w-full px-4 py-3 flex items-center justify-between transition-all duration-200 hover:bg-[rgba(59,130,246,0.04)]"
       >
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500/30 to-cyan-500/30 flex items-center justify-center flex-shrink-0">
-            <Sparkles className="w-3 h-3 text-violet-300" />
+        <div className="flex items-center gap-3">
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(20,184,166,0.2))' }}
+          >
+            <Sparkles className="w-4 h-4" style={{ color: '#8b5cf6' }} />
           </div>
           <div className="text-left">
-            <p className="text-xs font-semibold text-violet-300">Image Enhanced</p>
-            <p className="text-xs text-gray-500">
-              {enhancement.applied.length} optimization{enhancement.applied.length !== 1 ? 's' : ''} applied
+            <p className="text-sm font-semibold" style={{ color: '#8b5cf6' }}>
+              AI Image Enhancement Applied
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              {enhancement.applied.length} optimization{enhancement.applied.length !== 1 ? 's' : ''} improved scan quality
             </p>
           </div>
         </div>
-        {expanded ? (
-          <ChevronUp className="w-4 h-4 text-gray-500 flex-shrink-0" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
-        )}
+        <div className="flex items-center gap-2">
+          {/* Applied count badge */}
+          <span
+            className="text-xs font-bold px-2 py-0.5 rounded-full"
+            style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa' }}
+          >
+            +{Math.round(((enhancement.enhancedStats.brightness - enhancement.originalStats.brightness) +
+               (enhancement.enhancedStats.contrast - enhancement.originalStats.contrast)) / 2)} pts
+          </span>
+          {expanded
+            ? <ChevronUp  className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+            : <ChevronDown className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+          }
+        </div>
       </button>
 
-      {/* Expanded details */}
+      {/* Expanded */}
       <AnimatePresence>
         {expanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <div className="px-3 pb-3 pt-1 space-y-3 border-t border-white/8">
-              {/* Applied enhancements list */}
+            <div
+              className="px-4 pb-4 pt-3 space-y-5"
+              style={{ borderTop: '1px solid var(--border-color)' }}
+            >
+              {/* Applied ops */}
               <div>
-                <p className="text-xs font-medium text-gray-400 mb-1.5">Applied Enhancements:</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {enhancement.applied.map((item, i) => (
+                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+                  Applied Operations
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {enhancement.applied.map((op, i) => (
                     <span
                       key={i}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-500/15 text-violet-300 rounded-md text-xs"
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+                      style={{
+                        background: 'rgba(139,92,246,0.10)',
+                        border: '1px solid rgba(139,92,246,0.25)',
+                        color: '#a78bfa',
+                      }}
                     >
-                      {item}
+                      <Sparkles className="w-2.5 h-2.5" />
+                      {op}
                     </span>
                   ))}
                 </div>
               </div>
 
-              {/* Stats comparison */}
+              {/* Metrics */}
               <div>
-                <p className="text-xs font-medium text-gray-400 mb-1.5">Quality Metrics:</p>
-                <div className="space-y-1.5">
-                  {/* Brightness */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500">Brightness</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-600 font-mono">{enhancement.originalStats.brightness}</span>
-                      <span className="text-gray-700">→</span>
-                      <span className="text-white font-mono font-medium">{enhancement.enhancedStats.brightness}</span>
-                      <div className={`flex items-center gap-0.5 ${brightnessDelta.color} ml-1`}>
-                        <brightnessDelta.icon className="w-3 h-3" />
-                        <span className="font-mono text-xs">{brightnessDelta.text}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contrast */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500">Contrast</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-600 font-mono">{enhancement.originalStats.contrast}</span>
-                      <span className="text-gray-700">→</span>
-                      <span className="text-white font-mono font-medium">{enhancement.enhancedStats.contrast}</span>
-                      <div className={`flex items-center gap-0.5 ${contrastDelta.color} ml-1`}>
-                        <contrastDelta.icon className="w-3 h-3" />
-                        <span className="font-mono text-xs">{contrastDelta.text}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sharpness */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500">Sharpness</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-600 font-mono">{enhancement.originalStats.sharpness}</span>
-                      <span className="text-gray-700">→</span>
-                      <span className="text-white font-mono font-medium">{enhancement.enhancedStats.sharpness}</span>
-                      <div className={`flex items-center gap-0.5 ${sharpnessDelta.color} ml-1`}>
-                        <sharpnessDelta.icon className="w-3 h-3" />
-                        <span className="font-mono text-xs">{sharpnessDelta.text}</span>
-                      </div>
-                    </div>
-                  </div>
+                <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>
+                  Quality Metrics (Before → After)
+                </p>
+                <div className="space-y-4">
+                  <StatRow label="Brightness" before={enhancement.originalStats.brightness} after={enhancement.enhancedStats.brightness} />
+                  <StatRow label="Contrast"   before={enhancement.originalStats.contrast}   after={enhancement.enhancedStats.contrast}   />
+                  <StatRow label="Sharpness"  before={enhancement.originalStats.sharpness}  after={enhancement.enhancedStats.sharpness}  />
                 </div>
               </div>
             </div>

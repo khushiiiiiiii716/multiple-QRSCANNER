@@ -1,347 +1,289 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, X, SwitchCamera, AlertCircle, CheckCircle2, Loader2, Video, VideoOff } from 'lucide-react';
+import {
+  Camera, X, SwitchCamera, AlertCircle, CheckCircle2, Loader2
+} from 'lucide-react';
 import jsQR from 'jsqr';
-import { QRCodeResult } from '../types';
 
 interface LiveScannerProps {
   isOpen: boolean;
   onClose: () => void;
-  onDetection: (qrData: string, dataType: string) => void;
+  onDetection: (data: string, dataType: string) => void;
 }
 
 type CameraState = 'idle' | 'requesting' | 'active' | 'error';
 
-interface DetectedQR {
-  data: string;
-  dataType: string;
-  timestamp: number;
-  location: { x: number; y: number; width: number; height: number };
-}
+interface DetectedQR { data: string; dataType: string; timestamp: number; }
 
 function detectDataType(data: string): string {
   if (/^https?:\/\//i.test(data)) return 'URL';
-  if (/^mailto:/i.test(data)) return 'Email';
-  if (/^tel:/i.test(data)) return 'Phone';
-  if (/^smsto?:/i.test(data)) return 'SMS';
+  if (/^mailto:/i.test(data))     return 'Email';
+  if (/^tel:/i.test(data))        return 'Phone';
+  if (/^smsto?:/i.test(data))     return 'SMS';
   if (/^BEGIN:VCARD/i.test(data)) return 'vCard';
-  if (/^BEGIN:VEVENT/i.test(data)) return 'Calendar';
-  if (/^WIFI:/i.test(data)) return 'WiFi';
-  if (/^geo:/i.test(data)) return 'Geo Location';
-  if (/^bitcoin:/i.test(data)) return 'Bitcoin';
+  if (/^BEGIN:VEVENT/i.test(data))return 'Calendar';
+  if (/^WIFI:/i.test(data))       return 'WiFi';
+  if (/^geo:/i.test(data))        return 'Geo';
+  if (/^bitcoin:/i.test(data))    return 'Bitcoin';
   return 'Text';
 }
 
 export const LiveScanner: React.FC<LiveScannerProps> = ({ isOpen, onClose, onDetection }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const animationRef = useRef<number | null>(null);
+  const videoRef     = useRef<HTMLVideoElement>(null);
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
+  const streamRef    = useRef<MediaStream | null>(null);
+  const animRef      = useRef<number | null>(null);
+  const detectedRef  = useRef<DetectedQR[]>([]);
 
   const [cameraState, setCameraState] = useState<CameraState>('idle');
-  const [error, setError] = useState<string>('');
+  const [error, setError]             = useState('');
   const [detectedQRs, setDetectedQRs] = useState<DetectedQR[]>([]);
-  const [currentCamera, setCurrentCamera] = useState<'user' | 'environment'>('environment');
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [facingMode, setFacingMode]   = useState<'user' | 'environment'>('environment');
+  const [hasMultiCam, setHasMultiCam] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [scanCount, setScanCount] = useState(0);
+  const [scanCount, setScanCount]     = useState(0);
 
-  // Get available cameras
-  const getDevices = useCallback(async () => {
-    try {
-      const allDevices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = allDevices.filter(device => device.kind === 'videoinput');
-      setDevices(videoDevices);
-    } catch (err) {
-      console.warn('Could not enumerate devices:', err);
-    }
+  const stopStream = useCallback(() => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null; }
   }, []);
 
-  // Start camera
-  const startCamera = useCallback(async (facingMode: 'user' | 'environment') => {
+  const startCamera = useCallback(async (mode: 'user' | 'environment') => {
     setCameraState('requesting');
     setError('');
-
+    stopStream();
     try {
-      // Stop existing stream
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
       streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-
+      if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play(); }
       setCameraState('active');
-      await getDevices();
-    } catch (err: unknown) {
+
+      // check for multiple cameras
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setHasMultiCam(devices.filter(d => d.kind === 'videoinput').length > 1);
+    } catch (err) {
       setCameraState('error');
-      const message = err instanceof Error ? err.message : 'Failed to access camera';
-      if (message.includes('Permission denied') || message.includes('NotAllowedError')) {
-        setError('Camera permission denied. Please allow camera access and try again.');
-      } else if (message.includes('NotFoundError')) {
-        setError('No camera found. Please connect a camera and try again.');
-      } else {
-        setError(message);
-      }
+      const msg = err instanceof Error ? err.message : 'Camera error';
+      setError(
+        msg.includes('Permission') || msg.includes('NotAllowed')
+          ? 'Camera permission denied. Please allow access in your browser settings.'
+          : msg.includes('NotFound')
+          ? 'No camera found on this device.'
+          : msg
+      );
     }
-  }, [getDevices]);
+  }, [stopStream]);
 
-  // Switch camera
-  const switchCamera = useCallback(() => {
-    const newFacing = currentCamera === 'user' ? 'environment' : 'user';
-    setCurrentCamera(newFacing);
-    startCamera(newFacing);
-  }, [currentCamera, startCamera]);
-
-  // Scan frame for QR codes
   const scanFrame = useCallback(() => {
     if (!videoRef.current || !canvasRef.current || cameraState !== 'active') return;
-
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx || video.readyState !== video.HAVE_ENOUGH_DATA) {
+      animRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
 
-    if (!ctx || video.readyState !== video.HAVE_ENOUGH_DATA) return;
-
-    // Set canvas size to match video
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
-    // Draw current frame
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Get image data
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-    // Scan for QR code
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'attemptBoth',
-    });
+    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
 
     if (code) {
       const now = Date.now();
-      const dataType = detectDataType(code.data);
-
-      // Check if this QR was recently detected (debounce)
-      const isDuplicate = detectedQRs.some(
-        qr => qr.data === code.data && now - qr.timestamp < 2000
-      );
-
-      if (!isDuplicate) {
-        const location = {
-          x: code.location.topLeftCorner.x,
-          y: code.location.topLeftCorner.y,
-          width: code.location.topRightCorner.x - code.location.topLeftCorner.x,
-          height: code.location.bottomLeftCorner.y - code.location.topLeftCorner.y,
-        };
-
-        setDetectedQRs(prev => [...prev, { data: code.data, dataType, timestamp: now, location }]);
-        setScanCount(prev => prev + 1);
-        onDetection(code.data, dataType);
-
-        // Show success animation
+      const isDup = detectedRef.current.some(q => q.data === code.data && now - q.timestamp < 2000);
+      if (!isDup) {
+        const dt = detectDataType(code.data);
+        const entry: DetectedQR = { data: code.data, dataType: dt, timestamp: now };
+        detectedRef.current = [entry, ...detectedRef.current].slice(0, 20);
+        setDetectedQRs(prev => [entry, ...prev].slice(0, 10));
+        setScanCount(c => c + 1);
+        onDetection(code.data, dt);
         setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 1000);
+        setTimeout(() => setShowSuccess(false), 900);
 
-        // Draw bounding box
-        ctx.strokeStyle = '#4ECDC4';
-        ctx.lineWidth = 4;
+        // Draw bounding box on canvas
+        ctx.strokeStyle = '#14b8a6';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#14b8a6';
+        ctx.shadowBlur = 12;
         ctx.beginPath();
-        ctx.moveTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
-        ctx.lineTo(code.location.topRightCorner.x, code.location.topRightCorner.y);
+        ctx.moveTo(code.location.topLeftCorner.x,     code.location.topLeftCorner.y);
+        ctx.lineTo(code.location.topRightCorner.x,    code.location.topRightCorner.y);
         ctx.lineTo(code.location.bottomRightCorner.x, code.location.bottomRightCorner.y);
-        ctx.lineTo(code.location.bottomLeftCorner.x, code.location.bottomLeftCorner.y);
-        ctx.closePath();
-        ctx.stroke();
-
-        // Draw corner dots
-        const corners = [
-          code.location.topLeftCorner,
-          code.location.topRightCorner,
-          code.location.bottomLeftCorner,
-          code.location.bottomRightCorner,
-        ];
-        ctx.fillStyle = '#4ECDC4';
-        corners.forEach(corner => {
-          ctx.beginPath();
-          ctx.arc(corner.x, corner.y, 8, 0, Math.PI * 2);
-          ctx.fill();
-        });
+        ctx.lineTo(code.location.bottomLeftCorner.x,  code.location.bottomLeftCorner.y);
+        ctx.closePath(); ctx.stroke();
+        ctx.shadowBlur = 0;
       }
     }
 
-    // Continue scanning
-    animationRef.current = requestAnimationFrame(scanFrame);
-  }, [cameraState, detectedQRs, onDetection]);
+    animRef.current = requestAnimationFrame(scanFrame);
+  }, [cameraState, onDetection]);
 
-  // Start/stop scanning loop
+  // Scanning loop
   useEffect(() => {
-    if (isOpen && cameraState === 'active') {
-      animationRef.current = requestAnimationFrame(scanFrame);
-      return () => {
-        if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      };
+    if (cameraState === 'active') {
+      animRef.current = requestAnimationFrame(scanFrame);
+      return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
     }
-  }, [isOpen, cameraState, scanFrame]);
+  }, [cameraState, scanFrame]);
 
-  // Initialize camera when modal opens
+  // Open / close
   useEffect(() => {
     if (isOpen) {
-      startCamera(currentCamera);
-    } else {
-      // Cleanup when modal closes
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      }
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      setCameraState('idle');
+      detectedRef.current = [];
       setDetectedQRs([]);
       setScanCount(0);
+      startCamera(facingMode);
+    } else {
+      stopStream();
+      setCameraState('idle');
     }
-  }, [isOpen, startCamera, currentCamera]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
-  const handleClose = () => {
-    onClose();
+  const switchCam = () => {
+    const next = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(next);
+    startCamera(next);
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm"
-            onClick={handleClose}
+            onClick={onClose}
           />
 
-          {/* Modal */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.93, y: 20 }}
+              animate={{ opacity: 1, scale: 1,    y: 0  }}
+              exit={{    opacity: 0, scale: 0.93, y: 16 }}
               transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-              className="w-full max-w-2xl bg-gray-900 border border-white/15 rounded-2xl shadow-2xl pointer-events-auto overflow-hidden"
+              className="w-full max-w-2xl glass-card pointer-events-auto overflow-hidden"
+              style={{ boxShadow: '0 0 60px rgba(20,184,166,0.15), var(--shadow-lg)' }}
             >
+              {/* Gradient bar */}
+              <div className="h-1" style={{ background: 'linear-gradient(90deg, #14b8a6, #3b82f6)' }} />
+
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/10 to-blue-500/10">
+              <div
+                className="flex items-center justify-between px-6 py-4"
+                style={{ borderBottom: '1px solid var(--border-color)' }}
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
-                    <Camera className="w-4 h-4 text-white" />
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, #14b8a6, #3b82f6)' }}>
+                    <Camera className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-white font-semibold text-sm">Live QR Scanner</h2>
-                    <p className="text-gray-500 text-xs">
-                      {cameraState === 'active' ? `${scanCount} code${scanCount !== 1 ? 's' : ''} detected` : 'Point camera at QR code'}
+                    <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Live QR Scanner</h2>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {cameraState === 'active'
+                        ? `${scanCount} code${scanCount !== 1 ? 's' : ''} detected — scanning continuously`
+                        : 'Point camera at any QR code'}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {devices.length > 1 && cameraState === 'active' && (
-                    <button
-                      onClick={switchCamera}
-                      className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                      title="Switch camera"
-                    >
+                  {hasMultiCam && cameraState === 'active' && (
+                    <button onClick={switchCam} className="btn-ghost p-2" title="Switch camera">
                       <SwitchCamera className="w-4 h-4" />
                     </button>
                   )}
-                  <button
-                    onClick={handleClose}
-                    className="p-2 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
-                  >
+                  <button onClick={onClose} className="btn-ghost p-2">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* Camera view */}
-              <div className="relative bg-black aspect-video">
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover"
-                  playsInline
-                  muted
-                />
+              {/* Camera viewport */}
+              <div className="relative bg-[#020a14] aspect-video overflow-hidden">
+                <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
                 <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
-                {/* Scanning overlay */}
+                {/* Scanning overlay — corner guides + sweep line */}
                 {cameraState === 'active' && (
                   <div className="absolute inset-0 pointer-events-none">
-                    {/* Corner guides */}
-                    <div className="absolute top-1/4 left-1/4 w-16 h-16 border-t-4 border-l-4 border-cyan-400 rounded-tl-lg opacity-50" />
-                    <div className="absolute top-1/4 right-1/4 w-16 h-16 border-t-4 border-r-4 border-cyan-400 rounded-tr-lg opacity-50" />
-                    <div className="absolute bottom-1/4 left-1/4 w-16 h-16 border-b-4 border-l-4 border-cyan-400 rounded-bl-lg opacity-50" />
-                    <div className="absolute bottom-1/4 right-1/4 w-16 h-16 border-b-4 border-r-4 border-cyan-400 rounded-br-lg opacity-50" />
+                    {/* Vignette */}
+                    <div className="absolute inset-0"
+                      style={{ background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.45) 100%)' }} />
 
-                    {/* Scan line animation */}
+                    {/* Corner brackets */}
+                    {[
+                      'top-[20%] left-[20%] border-t-2 border-l-2 rounded-tl-lg',
+                      'top-[20%] right-[20%] border-t-2 border-r-2 rounded-tr-lg',
+                      'bottom-[20%] left-[20%] border-b-2 border-l-2 rounded-bl-lg',
+                      'bottom-[20%] right-[20%] border-b-2 border-r-2 rounded-br-lg',
+                    ].map((cls, i) => (
+                      <span key={i} className={`absolute w-8 h-8 ${cls}`}
+                        style={{ borderColor: '#14b8a6', opacity: 0.8 }} />
+                    ))}
+
+                    {/* Sweep line */}
                     <motion.div
-                      className="absolute left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent"
-                      animate={{ top: ['25%', '75%', '25%'] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                      className="absolute left-[20%] right-[20%] h-0.5 rounded-full"
+                      style={{
+                        background: 'linear-gradient(90deg, transparent, #14b8a6, transparent)',
+                        boxShadow: '0 0 10px #14b8a6',
+                      }}
+                      animate={{ top: ['22%', '78%', '22%'] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                     />
                   </div>
                 )}
 
-                {/* Success animation */}
+                {/* Success flash */}
                 <AnimatePresence>
                   {showSuccess && (
                     <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 1.5, opacity: 0 }}
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.4 }}
                       className="absolute inset-0 flex items-center justify-center"
                     >
-                      <div className="w-24 h-24 rounded-full bg-green-500/20 backdrop-blur-sm border-4 border-green-400 flex items-center justify-center">
-                        <CheckCircle2 className="w-12 h-12 text-green-400" />
+                      <div
+                        className="w-24 h-24 rounded-full flex items-center justify-center backdrop-blur-sm"
+                        style={{ background: 'rgba(20,184,166,0.2)', border: '3px solid #14b8a6' }}
+                      >
+                        <CheckCircle2 className="w-12 h-12" style={{ color: '#14b8a6' }} />
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* Loading state */}
+                {/* Loading */}
                 {cameraState === 'requesting' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <div className="text-center">
-                      <Loader2 className="w-12 h-12 text-cyan-400 mx-auto animate-spin mb-3" />
-                      <p className="text-white text-sm font-medium">Starting camera...</p>
-                      <p className="text-gray-400 text-xs mt-1">Please allow camera access</p>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="text-center space-y-3">
+                      <Loader2 className="w-12 h-12 mx-auto animate-spin" style={{ color: '#14b8a6' }} />
+                      <p className="text-white font-semibold">Starting camera…</p>
+                      <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>Allow camera access when prompted</p>
                     </div>
                   </div>
                 )}
 
-                {/* Error state */}
+                {/* Error */}
                 {cameraState === 'error' && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
-                    <div className="text-center max-w-md">
-                      <div className="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center mx-auto mb-4">
+                    <div className="text-center space-y-4 max-w-sm">
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto"
+                        style={{ background: 'rgba(239,68,68,0.15)', border: '2px solid rgba(239,68,68,0.4)' }}>
                         <AlertCircle className="w-8 h-8 text-red-400" />
                       </div>
-                      <h3 className="text-white font-semibold mb-2">Camera Access Error</h3>
-                      <p className="text-gray-400 text-sm mb-4">{error}</p>
-                      <button
-                        onClick={() => startCamera(currentCamera)}
-                        className="btn-primary text-sm"
-                      >
+                      <div>
+                        <h3 className="text-white font-bold">Camera Error</h3>
+                        <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>{error}</p>
+                      </div>
+                      <button onClick={() => startCamera(facingMode)} className="btn-primary text-sm">
                         Try Again
                       </button>
                     </div>
@@ -350,30 +292,51 @@ export const LiveScanner: React.FC<LiveScannerProps> = ({ isOpen, onClose, onDet
               </div>
 
               {/* Recent detections */}
-              {detectedQRs.length > 0 && (
-                <div className="px-6 py-4 border-t border-white/10 bg-white/5 max-h-32 overflow-y-auto scrollbar-thin">
-                  <p className="text-xs font-medium text-gray-400 mb-2">Recent Detections:</p>
-                  <div className="space-y-1">
-                    {detectedQRs.slice(-3).reverse().map((qr, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs">
-                        <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-300 rounded-md font-medium">
-                          {qr.dataType}
-                        </span>
-                        <span className="text-gray-400 font-mono truncate flex-1">
-                          {qr.data.substring(0, 50)}
-                        </span>
+              <AnimatePresence>
+                {detectedQRs.length > 0 && (
+                  <motion.div
+                    initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
+                    className="overflow-hidden"
+                    style={{ borderTop: '1px solid var(--border-color)' }}
+                  >
+                    <div className="px-5 py-3 max-h-28 overflow-y-auto scrollbar-thin">
+                      <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
+                        Recent Detections
+                      </p>
+                      <div className="space-y-1.5">
+                        {detectedQRs.slice(0, 4).map((qr, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex items-center gap-2.5 text-xs"
+                          >
+                            <span
+                              className="px-2 py-0.5 rounded-md font-semibold flex-shrink-0"
+                              style={{ background: 'rgba(20,184,166,0.12)', color: '#14b8a6' }}
+                            >
+                              {qr.dataType}
+                            </span>
+                            <span className="font-mono truncate flex-1" style={{ color: 'var(--text-secondary)' }}>
+                              {qr.data.substring(0, 60)}{qr.data.length > 60 && '…'}
+                            </span>
+                          </motion.div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              {/* Instructions */}
-              <div className="px-6 py-3 border-t border-white/8 bg-black/20">
-                <p className="text-xs text-gray-500 text-center">
-                  {cameraState === 'active' 
-                    ? 'Position a QR code in the frame. Detection is automatic.'
-                    : 'Click "Try Again" to enable camera access.'}
+              {/* Footer */}
+              <div
+                className="px-6 py-3 text-center"
+                style={{ borderTop: '1px solid var(--border-color)', background: 'var(--glass-bg)' }}
+              >
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {cameraState === 'active'
+                    ? 'Hold camera steady · Detection is automatic and continuous'
+                    : 'Camera required for live scanning'}
                 </p>
               </div>
             </motion.div>

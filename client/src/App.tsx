@@ -1,8 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ScanLine, Download, RefreshCw, Zap, AlertTriangle, Mail, Video,
-  Layers, FileText, Sheet, FileDown, ShieldAlert
+  ScanLine, Download, RefreshCw, AlertTriangle, Mail, Video,
+  Layers, FileText, Sheet, FileDown, ShieldAlert,
+  Search, Eye, ArrowRight, Sparkles, Brain,
+  Maximize2, RotateCcw, Sun, Volume2,
+  Link2, Phone, Wifi, MapPin, User, Calendar,
+  Hash, Tag, Globe, Shield, CheckCircle2
 } from 'lucide-react';
 import { DropZone } from './components/DropZone';
 import { AnnotatedImage } from './components/AnnotatedImage';
@@ -19,6 +23,121 @@ import { useApp } from './context/AppContext';
 import { exportToCSV, exportToExcel, exportToPDF } from './services/exportService';
 
 export default function App() {
+const DETECTION_BULLETS = [
+  { icon: Maximize2,    text: 'Detect unlimited QR codes from a single image' },
+  { icon: Eye,          text: 'Highlight every QR code with a unique colored bounding box' },
+  { icon: CheckCircle2, text: 'Show detection confidence & quality grade per code' },
+  { icon: Layers,       text: '5 scan strategies: full-res, multi-scale, tile, greyscale, threshold' },
+];
+
+const ENHANCEMENT_BULLETS = [
+  { icon: Sun,       text: 'Auto-correct brightness & contrast for dark or washed-out images' },
+  { icon: RotateCcw, text: 'EXIF-aware rotation — fixes portrait/landscape orientation issues' },
+  { icon: Volume2,   text: 'Median-filter noise removal before QR decoding' },
+  { icon: Sparkles,  text: 'Adaptive sharpening (1.5–2.5σ) for blurry captures' },
+];
+
+const QR_TYPES = [
+  { icon: Globe,    label: 'URL',          color: '#3b82f6', desc: 'Web links & deep links' },
+  { icon: Mail,     label: 'Email',        color: '#ec4899', desc: 'mailto: addresses' },
+  { icon: Phone,    label: 'Phone',        color: '#22c55e', desc: 'tel: & call links' },
+  { icon: Wifi,     label: 'WiFi',         color: '#14b8a6', desc: 'Network credentials' },
+  { icon: MapPin,   label: 'Geo',          color: '#f97316', desc: 'GPS coordinates' },
+  { icon: User,     label: 'vCard',        color: '#8b5cf6', desc: 'Contact cards' },
+  { icon: Calendar, label: 'Calendar',     color: '#6366f1', desc: 'Event invitations' },
+  { icon: Shield,   label: 'Bitcoin',      color: '#f59e0b', desc: 'Crypto wallets' },
+  { icon: Hash,     label: 'Numeric',      color: '#64748b', desc: 'Number sequences' },
+  { icon: Tag,      label: 'Text',         color: '#94a3b8', desc: 'Plain text payload' },
+];
+
+/* ─── Sub-components ────────────────────────────────────────────────────── */
+function FeatureCard({
+  icon: Icon,
+  iconBg,
+  iconColor,
+  badge,
+  badgeBg,
+  badgeColor,
+  title,
+  subtitle,
+  bullets,
+  delay = 0,
+  children,
+}: {
+  icon: React.FC<{ className?: string }>;
+  iconBg: string;
+  iconColor: string;
+  badge: string;
+  badgeBg: string;
+  badgeColor: string;
+  title: string;
+  subtitle: string;
+  bullets: { icon: React.FC<{ className?: string }>; text: string }[];
+  delay?: number;
+  children?: React.ReactNode;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, ease: 'easeOut' }}
+      className="glass-card p-6 h-full flex flex-col"
+    >
+      {/* Card top bar */}
+      <div
+        className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
+        style={{ background: `linear-gradient(90deg, ${iconColor}, transparent)` }}
+      />
+
+      {/* Icon + badge */}
+      <div className="flex items-start justify-between mb-5">
+        <div
+          className="w-12 h-12 rounded-2xl flex items-center justify-center"
+          style={{ background: iconBg }}
+        >
+          <Icon className="w-6 h-6" style={{ color: iconColor } as React.CSSProperties} />
+        </div>
+        <span
+          className="text-xs font-bold px-3 py-1 rounded-full"
+          style={{ background: badgeBg, color: badgeColor }}
+        >
+          {badge}
+        </span>
+      </div>
+
+      {/* Title */}
+      <h3 className="text-lg font-black mb-1" style={{ color: 'var(--text-primary)' }}>
+        {title}
+      </h3>
+      <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
+        {subtitle}
+      </p>
+
+      {/* Bullets */}
+      <ul className="space-y-3 flex-1">
+        {bullets.map(({ icon: BIcon, text }, i) => (
+          <motion.li
+            key={i}
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: delay + 0.1 + i * 0.07 }}
+            className="flex items-start gap-3 text-sm"
+          >
+            <div
+              className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+              style={{ background: iconBg }}
+            >
+              <BIcon className="w-3 h-3" style={{ color: iconColor } as React.CSSProperties} />
+            </div>
+            <span style={{ color: 'var(--text-secondary)' }}>{text}</span>
+          </motion.li>
+        ))}
+      </ul>
+
+      {children && <div className="mt-5">{children}</div>}
+    </motion.div>
+  );
+}
   const { addToHistory } = useApp();
 
   const [state, setState] = useState<ScanState>('idle');

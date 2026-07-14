@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import jsQR from 'jsqr';
+import jsQR, { QRCode } from 'jsqr';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface QRCodeResult {
@@ -54,9 +54,9 @@ async function toRGBA(
   input: Buffer | sharp.Sharp
 ): Promise<{ px: Uint8ClampedArray; w: number; h: number }> {
   // Convert to PNG to normalise channels (handles greyscale, CMYK, etc.)
-  const pngBuf = await (input instanceof Buffer ? sharp(input) : input)
-    .png()
-    .toBuffer();
+  const pngBuf = await (
+    Buffer.isBuffer(input) ? sharp(input) : (input as sharp.Sharp)
+  ).png().toBuffer();
 
   const { data, info } = await sharp(pngBuf)
     .ensureAlpha()
@@ -75,7 +75,7 @@ async function toRGBA(
   };
 }
 
-function tryDecode(px: Uint8ClampedArray, w: number, h: number): jsQR.QRCode | null {
+function tryDecode(px: Uint8ClampedArray, w: number, h: number): QRCode | null {
   try {
     return jsQR(px, w, h, { inversionAttempts: 'attemptBoth' });
   } catch {
@@ -86,7 +86,7 @@ function tryDecode(px: Uint8ClampedArray, w: number, h: number): jsQR.QRCode | n
 // ─── Geometry ────────────────────────────────────────────────────────────────
 type Corners = QRCodeResult['corners'];
 
-function makeCorners(code: jsQR.QRCode, sx: number, sy: number): Corners {
+function makeCorners(code: QRCode, sx: number, sy: number): Corners {
   return {
     topLeft:     { x: Math.round(code.location.topLeftCorner.x * sx),     y: Math.round(code.location.topLeftCorner.y * sy) },
     topRight:    { x: Math.round(code.location.topRightCorner.x * sx),    y: Math.round(code.location.topRightCorner.y * sy) },
@@ -95,7 +95,7 @@ function makeCorners(code: jsQR.QRCode, sx: number, sy: number): Corners {
   };
 }
 
-function shiftCorners(code: jsQR.QRCode, ox: number, oy: number): Corners {
+function shiftCorners(code: QRCode, ox: number, oy: number): Corners {
   return {
     topLeft:     { x: Math.round(code.location.topLeftCorner.x + ox),     y: Math.round(code.location.topLeftCorner.y + oy) },
     topRight:    { x: Math.round(code.location.topRightCorner.x + ox),    y: Math.round(code.location.topRightCorner.y + oy) },
