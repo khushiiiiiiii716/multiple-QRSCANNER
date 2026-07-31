@@ -119,11 +119,29 @@ client/
 
 ---
 
+## 🐍 Python Scanner (OpenCV + pyzbar)
+
+A standalone Python scanner lives in `python-scanner/` for CLI and future backend use:
+
+```powershell
+cd python-scanner
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python scan_image.py path\to\image.png
+python scan_webcam.py
+```
+
+**Windows note:** `pyzbar` requires the ZBar native library (`libzbar-64.dll`). See [python-scanner/README.md](python-scanner/README.md) for setup (`choco install zbar` or manual DLL placement).
+
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js 20+ 
 - npm or yarn
+- Python 3.10+ (optional, for `python-scanner/`)
 
 ### Installation
 

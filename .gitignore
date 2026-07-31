@@ -1,1 +1,5 @@
 node_modules
+python-scanner/.venv
+python-scanner/__pycache__
+python-scanner/**/__pycache__
+*.pyc
