@@ -314,12 +314,12 @@ function FeatureCard({
             className="space-y-10"
           >
             <div className="text-center pt-4 pb-2 space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/25 rounded-full text-xs text-cyan-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-100 border border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700 rounded-md text-xs text-zinc-600 dark:text-zinc-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
                 AI Powered Detection
               </div>
-              <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-300 to-white">
-                Scan Multiple <span className="text-gradient">QR Codes</span>
+              <h1 className="text-4xl sm:text-5xl font-extrabold text-zinc-900 dark:text-zinc-50">
+                Scan Multiple <span className="text-zinc-500 dark:text-zinc-400">QR Codes</span>
                 <br className="hidden sm:block" /> from Any Image
               </h1>
               <p className="text-gray-400 dark:text-gray-400 max-w-xl mx-auto text-base leading-7">
@@ -360,52 +360,43 @@ function FeatureCard({
             <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
               <button
                 onClick={() => setLiveScannerOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 active:scale-95"
+                className="btn-primary flex items-center gap-2 text-sm px-6 py-2.5"
               >
                 <Video className="w-4 h-4" />
                 Live Camera Scan
               </button>
               <button
                 onClick={() => setBatchOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 text-white font-semibold rounded-xl transition-all duration-200 active:scale-95"
+                className="btn-secondary flex items-center gap-2 text-sm px-6 py-2.5"
               >
                 <Layers className="w-4 h-4" />
                 Batch Scan
               </button>
-              <span className="text-gray-400 text-sm">or upload below</span>
+              <span className="text-zinc-500 text-sm ml-2">or upload below</span>
             </div>
 
-            <div className="relative rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-cyan-500/10 overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.16),transparent_30%)] pointer-events-none" />
+            <div className="relative rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/50 p-6 overflow-hidden mt-12">
               <div className="relative grid gap-4 sm:grid-cols-[auto_1fr] items-center">
-                <div className="px-3 py-2 rounded-3xl bg-black/10 backdrop-blur-xl border border-white/10 text-xs uppercase tracking-[0.24em] text-cyan-100 font-semibold w-fit z-10">
+                <div className="px-3 py-2 rounded-md bg-white border border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700 text-xs uppercase tracking-widest text-zinc-700 dark:text-zinc-300 font-semibold w-fit">
                   Multi-QR Detection Enabled
                 </div>
-                <div className="rounded-3xl overflow-hidden border border-white/10 bg-slate-950/70 shadow-xl">
-                  <div className="relative p-4">
-                    <div className="absolute left-4 top-4 w-16 h-16 rounded-full bg-cyan-400/10 blur-2xl" />
-                    <div className="absolute right-4 top-6 w-12 h-12 rounded-full bg-blue-500/10 blur-2xl" />
+                <div className="rounded-xl overflow-hidden border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+                  <div className="relative p-6">
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="text-sm uppercase tracking-[0.15em] text-slate-400">Live scan preview</p>
-                        <h3 className="text-xl font-bold text-white mt-2">Ready to detect</h3>
+                        <p className="text-xs uppercase tracking-widest text-zinc-500">Live scan preview</p>
+                        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mt-1">Ready to detect</h3>
                       </div>
-                      <span className="inline-flex items-center gap-2 rounded-full bg-cyan-500/15 px-3 py-2 text-xs font-semibold text-cyan-200">
-                        <Sparkles className="w-4 h-4" /> AI
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700">
+                        <Sparkles className="w-3.5 h-3.5" /> AI
                       </span>
                     </div>
-                    <div className="mt-6 rounded-[24px] bg-slate-900/80 p-4 border border-white/10">
-                      <div className="relative overflow-hidden rounded-3xl bg-slate-950/90 border border-white/10" style={{ minHeight: 220 }}>
-                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 animate-shimmer" />
-                        <div className="absolute inset-x-6 top-8 h-1.5 rounded-full bg-cyan-500/40 animate-pulse" />
-                        <div className="absolute inset-x-0 top-16 flex items-center justify-center">
-                          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-cyan-500/20 to-transparent shadow-[0_0_60px_rgba(59,130,246,0.18)]" />
+                    <div className="mt-6 rounded-lg bg-zinc-50 p-4 border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800">
+                      <div className="relative flex items-center justify-center rounded-md bg-white border border-zinc-200 dark:bg-zinc-950 dark:border-zinc-800" style={{ minHeight: 180 }}>
+                        <div className="text-zinc-400 dark:text-zinc-600 flex flex-col items-center gap-2">
+                          <ScanLine className="w-12 h-12" />
+                          <span className="text-xs uppercase tracking-widest">Awaiting Image</span>
                         </div>
-                        <div className="absolute inset-x-0 bottom-4 flex items-center justify-between px-6 text-xs uppercase tracking-[0.2em] text-slate-500">
-                          <span>Detecting QR…</span>
-                          <span>Est. 220ms</span>
-                        </div>
-                        <div className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-500" />
                       </div>
                     </div>
                   </div>
@@ -662,11 +653,11 @@ function FeatureCard({
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Video className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-sm font-semibold text-white dark:text-white">Live Scan Results</h3>
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Live Scan Results</h3>
               </div>
               <button
                 onClick={() => setLiveResults([])}
-                className="text-xs text-gray-500 hover:text-gray-300"
+                className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               >
                 Clear
               </button>
@@ -677,7 +668,7 @@ function FeatureCard({
                   key={`${r.data}-${i}`}
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-2 bg-white/5 rounded-lg border border-white/10"
+                  className="p-2 bg-black/5 dark:bg-white/5 rounded-lg border border-black/10 dark:border-white/10"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs px-2 py-0.5 bg-cyan-500/20 text-cyan-300 rounded-md font-medium">

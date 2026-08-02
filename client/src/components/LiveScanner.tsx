@@ -171,8 +171,8 @@ export const LiveScanner: React.FC<LiveScannerProps> = ({ isOpen, onClose, onDet
               className="w-full max-w-2xl glass-card pointer-events-auto overflow-hidden"
               style={{ boxShadow: '0 0 60px rgba(20,184,166,0.15), var(--shadow-lg)' }}
             >
-              {/* Gradient bar */}
-              <div className="h-1" style={{ background: 'linear-gradient(90deg, #14b8a6, #3b82f6)' }} />
+              {/* Separator bar */}
+              <div className="h-0.5 bg-zinc-200 dark:bg-zinc-800" />
 
               {/* Header */}
               <div
@@ -180,9 +180,8 @@ export const LiveScanner: React.FC<LiveScannerProps> = ({ isOpen, onClose, onDet
                 style={{ borderBottom: '1px solid var(--border-color)' }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                    style={{ background: 'linear-gradient(135deg, #14b8a6, #3b82f6)' }}>
-                    <Camera className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 rounded-md flex items-center justify-center bg-zinc-100 border border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700">
+                    <Camera className="w-5 h-5 text-zinc-700 dark:text-zinc-100" />
                   </div>
                   <div>
                     <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Live QR Scanner</h2>
@@ -244,10 +243,9 @@ export const LiveScanner: React.FC<LiveScannerProps> = ({ isOpen, onClose, onDet
 
                     {/* Sweep line */}
                     <motion.div
-                      className="absolute left-[20%] right-[20%] h-0.5 rounded-full"
+                      className="absolute left-[20%] right-[20%] h-[1px] rounded-full"
                       style={{
-                        background: 'linear-gradient(90deg, transparent, #14b8a6, transparent)',
-                        boxShadow: '0 0 10px #14b8a6',
+                        background: '#fafafa',
                       }}
                       animate={{ top: ['22%', '78%', '22%'] }}
                       transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}

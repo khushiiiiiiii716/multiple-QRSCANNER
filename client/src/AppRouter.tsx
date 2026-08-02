@@ -105,28 +105,15 @@ function Shell() {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-105"
-              style={{
-                background: 'linear-gradient(135deg, #3b82f6, #14b8a6)',
-                boxShadow: '0 4px 16px rgba(59,130,246,0.4)',
-              }}
-            >
-              <ScanLine className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-md flex items-center justify-center transition-all duration-300 group-hover:scale-105 bg-zinc-900 text-white dark:bg-white dark:text-black shadow-sm">
+              <ScanLine className="w-5 h-5" />
             </div>
             <div className="hidden sm:block">
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>
                   MultiScanner
                 </span>
-                <span
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
-                  style={{
-                    background: 'linear-gradient(135deg, #3b82f6, #14b8a6)',
-                    color: 'white',
-                    letterSpacing: '0.05em',
-                  }}
-                >
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-zinc-900 text-white dark:bg-white dark:text-black tracking-wider">
                   PRO
                 </span>
               </div>
@@ -149,10 +136,7 @@ function Shell() {
                   <Icon className="w-4 h-4" />
                   {label}
                   {to === '/history' && scanHistory.length > 0 && (
-                    <span
-                      className="ml-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6' }}
-                    >
+                    <span className="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-black">
                       {scanHistory.length}
                     </span>
                   )}
@@ -163,27 +147,19 @@ function Shell() {
 
           {/* Right actions */}
           <div className="flex items-center gap-2">
-            {/* Status pill */}
-            <div
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
-              style={{
-                background: 'rgba(34,197,94,0.10)',
-                border: '1px solid rgba(34,197,94,0.20)',
-                color: '#22c55e',
-              }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
               Live
             </div>
 
             <ThemeToggle />
 
             <button
-              className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-white/10 bg-white/5 text-sm font-semibold text-white transition-all duration-200 hover:bg-white/10"
+              className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-black/10 bg-black/5 text-sm font-semibold text-black dark:border-white/10 dark:bg-white/5 dark:text-white transition-all duration-200 hover:bg-black/10 dark:hover:bg-white/10"
               type="button"
             >
-              <span className="w-8 h-8 rounded-full grid place-items-center bg-gradient-to-br from-cyan-500 to-blue-500 text-white">
-                <UserCircle className="w-5 h-5" />
+              <span className="w-7 h-7 rounded-full grid place-items-center bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                <UserCircle className="w-4 h-4" />
               </span>
               <span className="hidden sm:inline">Shruti</span>
             </button>
