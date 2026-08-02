@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, Search, Trash2, Eye, Download, ScanLine, Calendar,
@@ -73,14 +74,24 @@ export default function HistoryPage() {
 
   if (scanHistory.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="w-20 h-20 rounded-2xl bg-white/5 dark:bg-white/5 flex items-center justify-center mx-auto mb-5">
-          <Clock className="w-10 h-10 text-gray-500" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="glass-card p-8 max-w-lg mx-auto space-y-5">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-cyan-500/20 to-blue-500/10 flex items-center justify-center mx-auto">
+            <Clock className="w-10 h-10 text-cyan-300" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black" style={{ color: 'var(--text-primary)' }}>No scan history yet</h2>
+            <p className="text-sm mt-3" style={{ color: 'var(--text-muted)' }}>
+              Scanned images will appear here. Upload a file or use the live scanner to start collecting insights.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link to="/" className="btn-primary px-6 py-2 inline-flex items-center justify-center">
+              Open Scanner
+            </Link>
+            <button className="btn-secondary px-6 py-2">Learn More</button>
+          </div>
         </div>
-        <h2 className="text-xl font-bold text-gray-300 dark:text-gray-300 mb-2">No scan history yet</h2>
-        <p className="text-gray-500 text-sm max-w-xs">
-          Scanned images will appear here. Go to the scanner and upload an image to get started.
-        </p>
       </div>
     );
   }
@@ -88,7 +99,7 @@ export default function HistoryPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="glass-card p-5 flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Scan History</h1>
           <p className="text-sm text-gray-500 mt-0.5">{scanHistory.length} scan{scanHistory.length !== 1 ? 's' : ''} recorded</p>
@@ -105,7 +116,7 @@ export default function HistoryPage() {
             onClick={() => {
               if (confirm('Clear all scan history? This cannot be undone.')) clearHistory();
             }}
-            className="px-4 py-2 text-sm font-medium rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+            className="btn-danger text-sm px-4 py-2 flex items-center gap-2"
           >
             <Trash2 className="w-4 h-4" />
             Clear All
@@ -123,9 +134,7 @@ export default function HistoryPage() {
             placeholder="Search by filename or QR data…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-white/5 dark:bg-white/5 border border-white/10 dark:border-white/10
-                       text-gray-900 dark:text-gray-200 placeholder-gray-500
-                       focus:outline-none focus:border-violet-500/50 transition-colors"
+            className="input-premium w-full pl-9 pr-4 py-2 text-sm"
           />
         </div>
 

@@ -189,13 +189,17 @@ export const LiveScanner: React.FC<LiveScannerProps> = ({ isOpen, onClose, onDet
                     <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                       {cameraState === 'active'
                         ? `${scanCount} code${scanCount !== 1 ? 's' : ''} detected — scanning continuously`
+                        : cameraState === 'requesting'
+                        ? 'Requesting camera access…'
+                        : cameraState === 'error'
+                        ? 'Camera unavailable'
                         : 'Point camera at any QR code'}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {hasMultiCam && cameraState === 'active' && (
-                    <button onClick={switchCam} className="btn-ghost p-2" title="Switch camera">
+                    <button onClick={switchCam} className="btn-secondary p-2" title="Switch camera">
                       <SwitchCamera className="w-4 h-4" />
                     </button>
                   )}
@@ -204,6 +208,16 @@ export const LiveScanner: React.FC<LiveScannerProps> = ({ isOpen, onClose, onDet
                   </button>
                 </div>
               </div>
+
+              {cameraState === 'error' && (
+                <div className="px-6 py-4 border-b border-white/10 bg-red-500/10 text-red-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 mt-0.5 text-red-300" />
+                  <div className="text-sm">
+                    <p className="font-semibold">Camera error</p>
+                    <p className="text-sm text-red-100/80">{error || 'Please enable camera access or try a different device.'}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Camera viewport */}
               <div className="relative bg-[#020a14] aspect-video overflow-hidden">

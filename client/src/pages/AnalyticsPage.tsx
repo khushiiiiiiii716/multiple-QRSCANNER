@@ -70,7 +70,7 @@ function buildWeeklySeries(history: ScanHistoryEntry[]) {
       map[k].qrCodes += e.totalFound;
     }
   }
-  return Object.entries(map).map(([week, v]) => ({ week, ...v }));
+  return Object.entries(map).map(([week, v]) => ({ date: week, ...v }));
 }
 
 function buildTypeDistribution(history: ScanHistoryEntry[]) {
@@ -129,7 +129,7 @@ const ChartTooltip = ({
 
 /* ── stat card ───────────────────────────────────────────────────────────── */
 interface StatCardProps {
-  icon: React.FC<{ className?: string }>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
   value: string | number;
   sub?: string;
@@ -191,7 +191,7 @@ function StatCard({ icon: Icon, label, value, sub, subColor, color, bg, delay = 
 function SectionHeader({
   icon: Icon, title, sub, color = '#3b82f6', right,
 }: {
-  icon: React.FC<{ className?: string }>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   title: string;
   sub?: string;
   color?: string;
@@ -359,7 +359,7 @@ export default function AnalyticsPage() {
   const recent   = useMemo(() => scanHistory.slice(0, 8),             [scanHistory]);
 
   const trendData = trendRange === '7d' ? daily7 : trendRange === '30d' ? daily30 : weekly12;
-  const trendKey  = trendRange === 'weekly' ? 'week' : 'date';
+  const trendKey  = 'date';
 
   /* ── week-over-week scan change ──────────────────────────────────────── */
   const wowChange = useMemo(() => {

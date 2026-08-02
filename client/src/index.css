@@ -86,15 +86,24 @@
   body::after {
     content: '';
     position: fixed;
-    width: 600px;
-    height: 600px;
+    width: 700px;
+    height: 700px;
     border-radius: 50%;
-    top: -200px;
-    right: -200px;
-    background: radial-gradient(circle, rgba(59,130,246,0.05) 0%, transparent 70%);
+    top: -220px;
+    right: -220px;
+    background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
-    animation: float 8s ease-in-out infinite;
+    animation: float 12s ease-in-out infinite;
+  }
+
+  .floating-particle {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(24px);
+    opacity: 0.18;
+    pointer-events: none;
+    animation: float 10s ease-in-out infinite;
   }
 
   #root { position: relative; z-index: 1; }
@@ -166,8 +175,8 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    box-shadow: 0 6px 28px rgba(59,130,246,0.5);
-    transform: translateY(-1px);
+    box-shadow: 0 10px 32px rgba(59,130,246,0.5);
+    transform: translateY(-1px) scale(1.02);
   }
 
   .btn-primary:active:not(:disabled) {
@@ -326,9 +335,22 @@
   }
 
   .nav-link.active {
-    background: rgba(59,130,246,0.12);
+    background: rgba(59,130,246,0.16);
     color: #3b82f6;
-    box-shadow: inset 0 0 0 1px rgba(59,130,246,0.25);
+    box-shadow: inset 0 0 0 1px rgba(59,130,246,0.25), 0 0 16px rgba(59,130,246,0.12);
+    position: relative;
+  }
+
+  .nav-link.active::after {
+    content: '';
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 8px;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #3b82f6, #14b8a6);
+    box-shadow: 0 0 12px rgba(59,130,246,0.4);
   }
 
   .dark .nav-link.active { color: #60a5fa; }
@@ -395,11 +417,12 @@
 
   /* Dropzone */
   .dropzone-base {
-    border: 2px dashed rgba(59,130,246,0.25);
-    border-radius: 20px;
+    border: 2px dashed rgba(59,130,246,0.30);
+    border-radius: 28px;
     transition: all 0.3s ease;
-    background: var(--glass-bg);
-    backdrop-filter: blur(8px);
+    background: linear-gradient(180deg, rgba(7,20,40,0.75), rgba(7,20,40,0.50));
+    backdrop-filter: blur(18px);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
   }
 
   .dropzone-base:hover, .dropzone-active {
@@ -471,9 +494,18 @@
     animation: flashRed 1s ease-in-out infinite;
   }
 
+  .animate-pulse-slow {
+    animation: pulseSlow 2.4s ease-in-out infinite;
+  }
+
   @keyframes flashRed {
     0%, 100% { opacity: 1; }
     50%       { opacity: 0.5; }
+  }
+
+  @keyframes pulseSlow {
+    0%, 100% { opacity: 0.75; transform: scale(1); }
+    50%       { opacity: 1; transform: scale(1.02); }
   }
 
   @keyframes float {

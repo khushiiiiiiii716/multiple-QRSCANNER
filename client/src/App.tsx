@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ScanLine, Download, RefreshCw, AlertTriangle, Mail, Video,
+  ScanLine, Clock, Download, RefreshCw, AlertTriangle, Mail, Video,
   Layers, FileText, Sheet, FileDown, ShieldAlert,
   Search, Eye, ArrowRight, Sparkles, Brain,
   Maximize2, RotateCcw, Sun, Volume2,
@@ -64,7 +64,7 @@ function FeatureCard({
   delay = 0,
   children,
 }: {
-  icon: React.FC<{ className?: string }>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   iconBg: string;
   iconColor: string;
   badge: string;
@@ -72,7 +72,7 @@ function FeatureCard({
   badgeColor: string;
   title: string;
   subtitle: string;
-  bullets: { icon: React.FC<{ className?: string }>; text: string }[];
+  bullets: { icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; text: string }[];
   delay?: number;
   children?: React.ReactNode;
 }) {
@@ -138,7 +138,21 @@ function FeatureCard({
     </motion.div>
   );
 }
-  const { addToHistory } = useApp();
+  const { addToHistory, scanHistory } = useApp();
+
+  const totalScans = scanHistory.length;
+  const totalDetected = useMemo(
+    () => scanHistory.reduce((sum, entry) => sum + entry.totalFound, 0),
+    [scanHistory]
+  );
+  const avgScanTime = useMemo(
+    () => (totalScans ? Math.round(scanHistory.reduce((sum, entry) => sum + entry.processingTimeMs, 0) / totalScans) : 0),
+    [scanHistory, totalScans]
+  );
+  const accuracyPct = useMemo(
+    () => (totalScans ? Math.round((scanHistory.filter((entry) => entry.totalFound > 0).length / totalScans) * 100) : 0),
+    [scanHistory, totalScans]
+  );
 
   const [state, setState] = useState<ScanState>('idle');
   const [result, setResult] = useState<ScanResponse | null>(null);
@@ -198,6 +212,63 @@ function FeatureCard({
     setFilter('all');
   };
 
+  useEffect(() => {
+    const isFormElement = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return false;
+      const tag = target.tagName.toLowerCase();
+      const elem = target as HTMLElement;
+      return tag === 'input' || tag === 'textarea' || tag === 'select' || elem.isContentEditable;
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || isFormElement(event.target)) return;
+      const key = event.key.toLowerCase();
+      const isCommand = event.ctrlKey || event.metaKey;
+
+      if (key === 'escape') {
+        if (liveScannerOpen) {
+          setLiveScannerOpen(false);
+          event.preventDefault();
+          return;
+        }
+        if (batchOpen) {
+          setBatchOpen(false);
+          event.preventDefault();
+          return;
+        }
+        if (emailModalOpen) {
+          setEmailModalOpen(false);
+          event.preventDefault();
+          return;
+        }
+      }
+
+      if (!isCommand) return;
+
+      switch (key) {
+        case 'l':
+          setLiveScannerOpen(true);
+          event.preventDefault();
+          break;
+        case 'b':
+          setBatchOpen(true);
+          event.preventDefault();
+          break;
+        case 'r':
+          if (state !== 'idle') {
+            handleReset();
+            event.preventDefault();
+          }
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [liveScannerOpen, batchOpen, emailModalOpen, state, handleReset]);
+
   const handleLiveDetection = useCallback((data: string, dataType: string) => {
     setLiveResults(prev => {
       const isDuplicate = prev.some(r => r.data === data &&
@@ -240,39 +311,106 @@ function FeatureCard({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
-            className="text-center pt-4 pb-2 space-y-3"
+            className="space-y-10"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-500/10 border border-violet-500/25 rounded-full text-xs text-violet-300 dark:text-violet-300 mb-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-              Automatic multi-QR detection
+            <div className="text-center pt-4 pb-2 space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/25 rounded-full text-xs text-cyan-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-pulse" />
+                AI Powered Detection
+              </div>
+              <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-300 to-white">
+                Scan Multiple <span className="text-gradient">QR Codes</span>
+                <br className="hidden sm:block" /> from Any Image
+              </h1>
+              <p className="text-gray-400 dark:text-gray-400 max-w-xl mx-auto text-base leading-7">
+                Upload or drop files to detect multiple QR codes in one pass. Get live confidence, bounding boxes, analytics, and export-ready results in a modern dashboard.
+              </p>
             </div>
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-gray-900 dark:via-white to-cyan-300">
-              Scan Multiple QR Codes
-              <br className="hidden sm:block" /> from Any Image
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 max-w-lg mx-auto text-base">
-              Upload an image and instantly detect, decode, and visualize every QR code — with bounding boxes, data types, and a full results dashboard.
-            </p>
-            <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                { label: 'Images Scanned', value: totalScans, icon: Sparkles },
+                { label: 'QR Codes Detected', value: totalDetected, icon: Eye },
+                { label: 'Detection Accuracy', value: `${accuracyPct}%`, icon: ShieldAlert },
+                { label: 'Avg Scan Time', value: `${avgScanTime}ms`, icon: Clock },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="glass-card p-4 flex items-center gap-3 border border-white/10"
+                  style={{ minWidth: 0 }}
+                >
+                  <div
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center"
+                    style={{ background: 'rgba(59,130,246,0.12)' }}
+                  >
+                    <stat.icon className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                      {stat.value}
+                    </p>
+                    <p className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--text-muted)' }}>
+                      {stat.label}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
               <button
                 onClick={() => setLiveScannerOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500
-                           text-white font-semibold rounded-xl transition-all duration-200 
-                           shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 active:scale-95"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 active:scale-95"
               >
                 <Video className="w-4 h-4" />
                 Live Camera Scan
               </button>
               <button
                 onClick={() => setBatchOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-violet-500/15 hover:bg-violet-500/25
-                           border border-violet-500/30 text-violet-300 font-semibold rounded-xl
-                           transition-all duration-200 active:scale-95"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 text-white font-semibold rounded-xl transition-all duration-200 active:scale-95"
               >
                 <Layers className="w-4 h-4" />
                 Batch Scan
               </button>
-              <span className="text-gray-500 text-sm">or upload below</span>
+              <span className="text-gray-400 text-sm">or upload below</span>
+            </div>
+
+            <div className="relative rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-cyan-500/10 overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.16),transparent_30%)] pointer-events-none" />
+              <div className="relative grid gap-4 sm:grid-cols-[auto_1fr] items-center">
+                <div className="px-3 py-2 rounded-3xl bg-black/10 backdrop-blur-xl border border-white/10 text-xs uppercase tracking-[0.24em] text-cyan-100 font-semibold w-fit z-10">
+                  Multi-QR Detection Enabled
+                </div>
+                <div className="rounded-3xl overflow-hidden border border-white/10 bg-slate-950/70 shadow-xl">
+                  <div className="relative p-4">
+                    <div className="absolute left-4 top-4 w-16 h-16 rounded-full bg-cyan-400/10 blur-2xl" />
+                    <div className="absolute right-4 top-6 w-12 h-12 rounded-full bg-blue-500/10 blur-2xl" />
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm uppercase tracking-[0.15em] text-slate-400">Live scan preview</p>
+                        <h3 className="text-xl font-bold text-white mt-2">Ready to detect</h3>
+                      </div>
+                      <span className="inline-flex items-center gap-2 rounded-full bg-cyan-500/15 px-3 py-2 text-xs font-semibold text-cyan-200">
+                        <Sparkles className="w-4 h-4" /> AI
+                      </span>
+                    </div>
+                    <div className="mt-6 rounded-[24px] bg-slate-900/80 p-4 border border-white/10">
+                      <div className="relative overflow-hidden rounded-3xl bg-slate-950/90 border border-white/10" style={{ minHeight: 220 }}>
+                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 animate-shimmer" />
+                        <div className="absolute inset-x-6 top-8 h-1.5 rounded-full bg-cyan-500/40 animate-pulse" />
+                        <div className="absolute inset-x-0 top-16 flex items-center justify-center">
+                          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-cyan-500/20 to-transparent shadow-[0_0_60px_rgba(59,130,246,0.18)]" />
+                        </div>
+                        <div className="absolute inset-x-0 bottom-4 flex items-center justify-between px-6 text-xs uppercase tracking-[0.2em] text-slate-500">
+                          <span>Detecting QR…</span>
+                          <span>Est. 220ms</span>
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-500" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </motion.section>
         )}
