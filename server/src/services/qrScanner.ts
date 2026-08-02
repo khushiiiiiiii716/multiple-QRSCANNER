@@ -200,6 +200,54 @@ export async function scanQRCodes(
     });
   }
 
+  // ── 0. External API (Primary) ─────────────────────────────────────────────
+  const externalApiUrl = process.env.EXTERNAL_QR_API_URL;
+  if (externalApiUrl) {
+    try {
+      const formData = new FormData();
+      const blob = new Blob([new Uint8Array(srcPng)], { type: 'image/png' });
+      formData.append('file', blob, 'image.png');
+      
+      const response = await fetch(externalApiUrl, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`External API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (data.results && Array.isArray(data.results)) {
+        for (const res of data.results) {
+          const [xmin, ymin, xmax, ymax] = res.bbox;
+          const corners = {
+            topLeft: { x: xmin, y: ymin },
+            topRight: { x: xmax, y: ymin },
+            bottomLeft: { x: xmin, y: ymax },
+            bottomRight: { x: xmax, y: ymax },
+          };
+          push(res.data, corners);
+        }
+        
+        // If we found QRs via API, we can return immediately and skip local extraction
+        if (found.length > 0) {
+          const annotatedImageBase64 = await annotate(srcPng, found, OW, OH);
+          return {
+            qrCodes: found,
+            totalFound: found.length,
+            annotatedImageBase64,
+            originalWidth: OW,
+            originalHeight: OH,
+            processingTimeMs: Date.now() - t0,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[scan] External API failed, falling back to local:', (err as Error).message);
+    }
+  }
+
   // ── 1. Full resolution ────────────────────────────────────────────────────
   try {
     const { px, w, h } = await toRGBA(srcPng);
